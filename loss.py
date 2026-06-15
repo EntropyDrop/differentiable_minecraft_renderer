@@ -6,11 +6,13 @@ from differentiable_renderer import DifferentiableRenderer
 
 class MinecraftRenderLoss(nn.Module):
     def __init__(self, mappings_dir=None, bg_color=(1/255, 1/255, 1/255), 
-                 lambda_lpips=1.0, lambda_mse=1.0, use_lpips=True, views=None):
+                 lambda_lpips=1.0, lambda_mse=1.0, use_lpips=True, views=None,
+                 foreground_weight=0.0):
         super().__init__()
         self.renderer = DifferentiableRenderer(mappings_dir=mappings_dir, bg_color=bg_color)
         self.lambda_lpips = lambda_lpips
         self.lambda_mse = lambda_mse
+        self.foreground_weight = foreground_weight
         
         if views is not None:
             if isinstance(views, str):
@@ -66,8 +68,16 @@ class MinecraftRenderLoss(nn.Module):
             pred_view = renders_pred[view] # (B, 4, H_out, W_out)
             gt_view = renders_gt[view]     # (B, 4, H_out, W_out)
             
-            # 1. Compute MSE Loss (on RGB channels)
-            loss_mse += F.mse_loss(pred_view[:, :3], gt_view[:, :3])
+            # 1. Compute MSE Loss (on RGB channels). The foreground term prevents gray background
+            # pixels from washing out character differences.
+            full_mse = F.mse_loss(pred_view[:, :3], gt_view[:, :3])
+            if self.foreground_weight > 0:
+                fg_mask = torch.maximum(pred_view[:, 3:4], gt_view[:, 3:4]).detach()
+                fg_denom = fg_mask.sum(dim=(1, 2, 3)).clamp_min(1.0)
+                fg_mse = (((pred_view[:, :3] - gt_view[:, :3]) ** 2) * fg_mask).sum(dim=(1, 2, 3)) / (fg_denom * 3.0)
+                loss_mse += full_mse + self.foreground_weight * fg_mse.mean()
+            else:
+                loss_mse += full_mse
             
             # 2. Compute LPIPS Loss (on RGB channels)
             if self.lpips_loss_fn is not None:
