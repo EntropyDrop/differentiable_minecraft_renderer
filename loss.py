@@ -6,7 +6,7 @@ from differentiable_renderer import DifferentiableRenderer
 
 class MinecraftRenderLoss(nn.Module):
     def __init__(self, mappings_dir=None, bg_color=(1/255, 1/255, 1/255), 
-                 lambda_lpips=0.0, lambda_mse=1.0, use_lpips=False, views=None,
+                 lambda_lpips=0.0, lambda_mse=0.0, use_lpips=False, views=None,
                  foreground_weight=0.0):
         super().__init__()
         self.renderer = DifferentiableRenderer(mappings_dir=mappings_dir, bg_color=bg_color)
