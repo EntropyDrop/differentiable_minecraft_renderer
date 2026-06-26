@@ -45,6 +45,10 @@ def render_and_save_mappings():
             "cam_front": (0.3, 0.4, 0.5), "zoom": 0.22, "look_at_y": 12, "walk": True,
             "core_display": full_part, "decor_display": full_part, "output_size": (768, 920)
         },
+        "walk_perspective_back": {
+            "cam_front": (-0.3, 0.4, -0.5), "zoom": 0.22, "look_at_y": 12, "walk": True,
+            "core_display": full_part, "decor_display": full_part, "output_size": (768, 920)
+        },
         "static_front": {
             "cam_front": (0.0, 0.0, 0.5), "zoom": 0.35, "look_at_y": 12, "walk": False,
             "core_display": full_part, "decor_display": full_part, "output_size": (306, 512)
