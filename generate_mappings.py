@@ -39,75 +39,99 @@ def render_and_save_mappings():
     
     full_part = ['head', 'body', 'left_arm', 'right_arm', 'left_leg', 'right_leg']
     
-    # Define all 17 views from build_target_img.py
+    # Define all renderer views from build_target_img.py
     views = {
         "walk_perspective": {
             "cam_front": (0.3, 0.4, 0.5), "zoom": 0.22, "look_at_y": 12, "walk": True,
-            "core_display": full_part, "decor_display": full_part, "output_size": (384, 460)
+            "core_display": full_part, "decor_display": full_part, "output_size": (768, 920)
         },
         "static_front": {
             "cam_front": (0.0, 0.0, 0.5), "zoom": 0.35, "look_at_y": 12, "walk": False,
-            "core_display": full_part, "decor_display": full_part, "output_size": (153, 256)
+            "core_display": full_part, "decor_display": full_part, "output_size": (306, 512)
         },
         "static_back": {
             "cam_front": (-0.0, -0.0, -0.5), "zoom": 0.35, "look_at_y": 12, "walk": False,
-            "core_display": full_part, "decor_display": full_part, "output_size": (153, 256)
+            "core_display": full_part, "decor_display": full_part, "output_size": (306, 512)
+        },
+        "front": {
+            "cam_front": (0.0, 0.0, 0.5), "zoom": 0.35, "look_at_y": 12, "walk": False,
+            "core_display": full_part, "decor_display": full_part, "output_size": (512, 512)
+        },
+        "back": {
+            "cam_front": (0.0, 0.0, -0.5), "zoom": 0.35, "look_at_y": 12, "walk": False,
+            "core_display": full_part, "decor_display": full_part, "output_size": (512, 512)
+        },
+        "left": {
+            "cam_front": (0.5, 0.0, 0.0), "zoom": 0.35, "look_at_y": 12, "walk": False,
+            "core_display": full_part, "decor_display": full_part, "output_size": (512, 512)
+        },
+        "right": {
+            "cam_front": (-0.5, 0.0, 0.0), "zoom": 0.35, "look_at_y": 12, "walk": False,
+            "core_display": full_part, "decor_display": full_part, "output_size": (512, 512)
+        },
+        "top_front_45": {
+            "cam_front": (0.0, 0.4, 0.5), "zoom": 0.28, "look_at_y": 12, "walk": False,
+            "core_display": full_part, "decor_display": full_part, "output_size": (306, 512)
+        },
+        "top_back_45": {
+            "cam_front": (0.0, 0.4, -0.5), "zoom": 0.28, "look_at_y": 12, "walk": False,
+            "core_display": full_part, "decor_display": full_part, "output_size": (306, 512)
         },
         "first_layer_front": {
             "cam_front": (0.3, 0.4, 0.5), "zoom": 0.28, "look_at_y": 12, "walk": False,
-            "core_display": full_part, "decor_display": [], "output_size": (153, 256)
+            "core_display": full_part, "decor_display": [], "output_size": (306, 512)
         },
         "first_layer_back": {
             "cam_front": (-0.5, -0.4, -0.5), "zoom": 0.28, "look_at_y": 12, "walk": False,
-            "core_display": full_part, "decor_display": [], "output_size": (153, 256)
+            "core_display": full_part, "decor_display": [], "output_size": (306, 512)
         },
         "left_front": {
-            "cam_front": (0.3, 0.4, 0.5), "zoom": 0.28, "look_at_y": 12, "walk": False,
-            "core_display": full_part, "decor_display": full_part, "output_size": (153, 256)
+            "cam_front": (0.3, 0.4, 0.5), "zoom": 0.22, "look_at_y": 16, "walk": False,
+            "core_display": full_part, "decor_display": full_part, "output_size": (306, 512)
         },
         "left_back": {
-            "cam_front": (-0.5, -0.4, -0.5), "zoom": 0.28, "look_at_y": 12, "walk": False,
-            "core_display": full_part, "decor_display": full_part, "output_size": (153, 256)
+            "cam_front": (-0.5, -0.4, -0.5), "zoom": 0.22, "look_at_y": 16, "walk": False,
+            "core_display": full_part, "decor_display": full_part, "output_size": (306, 512)
         },
         "right_front": {
-            "cam_front": (0.3, -0.4, 0.5), "zoom": 0.28, "look_at_y": 12, "walk": False,
-            "core_display": full_part, "decor_display": full_part, "output_size": (153, 256)
+            "cam_front": (0.3, -0.4, 0.5), "zoom": 0.22, "look_at_y": 16, "walk": False,
+            "core_display": full_part, "decor_display": full_part, "output_size": (306, 512)
         },
         "right_back": {
-            "cam_front": (-0.5, 0.4, -0.5), "zoom": 0.28, "look_at_y": 12, "walk": False,
-            "core_display": full_part, "decor_display": full_part, "output_size": (153, 256)
+            "cam_front": (-0.5, 0.4, -0.5), "zoom": 0.22, "look_at_y": 16, "walk": False,
+            "core_display": full_part, "decor_display": full_part, "output_size": (306, 512)
         },
         "head_front_right": {
             "cam_front": (-0.3, -0.4, 0.5), "zoom": 0.09, "look_at_y": 28, "walk": False,
-            "core_display": ['head'], "decor_display": ['head'], "output_size": (153, 96)
+            "core_display": ['head'], "decor_display": ['head'], "output_size": (306, 192)
         },
         "head_front_left": {
             "cam_front": (0.3, -0.4, 0.5), "zoom": 0.09, "look_at_y": 28, "walk": False,
-            "core_display": ['head'], "decor_display": ['head'], "output_size": (153, 96)
+            "core_display": ['head'], "decor_display": ['head'], "output_size": (306, 192)
         },
         "head_back_left": {
             "cam_front": (-0.5, -0.4, -0.5), "zoom": 0.09, "look_at_y": 28, "walk": False,
-            "core_display": ['head'], "decor_display": ['head'], "output_size": (153, 96)
+            "core_display": ['head'], "decor_display": ['head'], "output_size": (306, 192)
         },
         "head_back_right": {
             "cam_front": (0.5, -0.4, -0.5), "zoom": 0.09, "look_at_y": 28, "walk": False,
-            "core_display": ['head'], "decor_display": ['head'], "output_size": (153, 96)
+            "core_display": ['head'], "decor_display": ['head'], "output_size": (306, 192)
         },
         "body_front": {
             "cam_front": (0.3, 0.4, 0.5), "zoom": 0.25, "look_at_y": 12, "walk": False,
-            "core_display": ['body'], "decor_display": ['body'], "output_size": (192, 384)
+            "core_display": ['body'], "decor_display": ['body'], "output_size": (384, 768)
         },
         "body_back": {
             "cam_front": (-0.3, 0.4, 0.5), "zoom": 0.25, "look_at_y": 12, "walk": False,
-            "core_display": ['body'], "decor_display": ['body'], "output_size": (192, 384)
+            "core_display": ['body'], "decor_display": ['body'], "output_size": (384, 768)
         },
         "hat_front": {
             "cam_front": (0.3, 0.3, 0), "zoom": 0.25, "look_at_y": 22, "walk": False,
-            "core_display": [], "decor_display": ['head'], "output_size": (153, 170)
+            "core_display": [], "decor_display": ['head'], "output_size": (306, 340)
         },
         "hat_back": {
             "cam_front": (-0.3, 0.3, 0), "zoom": 0.25, "look_at_y": 22, "walk": False,
-            "core_display": [], "decor_display": ['head'], "output_size": (153, 170)
+            "core_display": [], "decor_display": ['head'], "output_size": (306, 340)
         },
     }
     
