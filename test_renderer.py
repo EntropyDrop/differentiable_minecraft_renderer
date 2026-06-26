@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from PIL import Image
 
-import mc_render
+from mc_skin_utils import mc_render
 from differentiable_renderer import DifferentiableRenderer
 
 def run_tests():
@@ -18,7 +18,7 @@ def run_tests():
     skin_img = Image.open(skin_path).convert("RGBA")
     
     # Run voxel consistency resolver if any
-    from mc_voxel_texture_resolver import resolve_voxel_consistency
+    from mc_skin_utils.mc_voxel_texture_resolver import resolve_voxel_consistency
     skin_img = resolve_voxel_consistency(skin_img)
     skin_np = np.array(skin_img)
     
@@ -162,7 +162,7 @@ def run_tests():
         
         # 1. Render using PyVista (Ground Truth)
         pv_render = mc_render.render_skin(
-            skin=skin_np,
+            skin=Image.fromarray(skin_np),
             output_size=output_size,
             cam_front=params["cam_front"],
             zoom=params["zoom"],

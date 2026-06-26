@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from PIL import Image
 
-import mc_render
+from mc_skin_utils import mc_render
 
 def generate_coordinate_skins():
     # Load masks
@@ -163,7 +163,7 @@ def render_and_save_mappings():
         
         # Render inner layer
         inner_rendered = mc_render.render_skin(
-            skin=inner_skin,
+            skin=Image.fromarray(inner_skin),
             output_size=output_size,
             cam_front=params["cam_front"],
             zoom=params["zoom"],
@@ -179,7 +179,7 @@ def render_and_save_mappings():
         
         # Render outer layer
         outer_rendered = mc_render.render_skin(
-            skin=outer_skin,
+            skin=Image.fromarray(outer_skin),
             output_size=output_size,
             cam_front=params["cam_front"],
             zoom=params["zoom"],

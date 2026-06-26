@@ -16,7 +16,7 @@ def run_fitting():
     skin_img = Image.open(skin_path).convert("RGBA")
     
     # Run voxel consistency resolver if any
-    from mc_voxel_texture_resolver import resolve_voxel_consistency
+    from mc_skin_utils.mc_voxel_texture_resolver import resolve_voxel_consistency
     skin_img = resolve_voxel_consistency(skin_img)
     
     skin_np = np.array(skin_img)
