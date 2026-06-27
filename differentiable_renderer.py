@@ -24,12 +24,12 @@ class DifferentiableRenderer(nn.Module):
                 data = torch.load(mapping_path)
                 
                 # Extract and process inner layer
-                inner_uv = data["inner_uv_map"]  # (H, W, 2)
-                inner_mask = data["inner_mask"]  # (H, W)
+                inner_uv = data["inner_uv_map"].float()  # (H, W, 2)
+                inner_mask = data["inner_mask"].float()  # (H, W)
                 
                 # Extract and process outer layer
-                outer_uv = data["outer_uv_map"]  # (H, W, 2)
-                outer_mask = data["outer_mask"]  # (H, W)
+                outer_uv = data["outer_uv_map"].float()  # (H, W, 2)
+                outer_mask = data["outer_mask"].float()  # (H, W)
                 
                 # Normalize UV coordinates [0, 63] to [-1, 1] for grid_sample
                 inner_grid = torch.zeros_like(inner_uv)
@@ -46,6 +46,29 @@ class DifferentiableRenderer(nn.Module):
                 self.register_buffer(f"{view_name}_outer_grid", outer_grid)
                 self.register_buffer(f"{view_name}_outer_mask", outer_mask)
 
+                if "outer_uv_layers" in data and "outer_masks" in data:
+                    outer_uv_layers = data["outer_uv_layers"].float()
+                    outer_mask_layers = data["outer_masks"].float()
+                    outer_grid_layers = torch.zeros_like(outer_uv_layers)
+                    outer_grid_layers[..., 0] = (outer_uv_layers[..., 0] / 63.0) * 2.0 - 1.0
+                    outer_grid_layers[..., 1] = (outer_uv_layers[..., 1] / 63.0) * 2.0 - 1.0
+                    self.register_buffer(f"{view_name}_outer_grid_layers", outer_grid_layers)
+                    self.register_buffer(f"{view_name}_outer_mask_layers", outer_mask_layers)
+
+                if "composite_uv_layers" in data and "composite_masks" in data:
+                    composite_uv_layers = data["composite_uv_layers"].float()
+                    composite_mask_layers = data["composite_masks"].float()
+                    composite_grid_layers = torch.zeros_like(composite_uv_layers)
+                    composite_grid_layers[..., 0] = (composite_uv_layers[..., 0] / 63.0) * 2.0 - 1.0
+                    composite_grid_layers[..., 1] = (composite_uv_layers[..., 1] / 63.0) * 2.0 - 1.0
+                    self.register_buffer(f"{view_name}_composite_grid_layers", composite_grid_layers)
+                    self.register_buffer(f"{view_name}_composite_mask_layers", composite_mask_layers)
+                    if "composite_is_decor_layers" in data:
+                        self.register_buffer(
+                            f"{view_name}_composite_is_decor_layers",
+                            data["composite_is_decor_layers"].bool(),
+                        )
+
     def forward_view(self, skins, view_name):
         """
         Render a single view for a batch of skins.
@@ -61,44 +84,83 @@ class DifferentiableRenderer(nn.Module):
         assert C == 4, "Skins must have 4 channels (RGBA)"
         assert H_in == 64 and W_in == 64, "Skins must be 64x64"
         
-        # Retrieve buffers
-        inner_grid = getattr(self, f"{view_name}_inner_grid").unsqueeze(0).expand(B, -1, -1, -1)
-        inner_mask = getattr(self, f"{view_name}_inner_mask").unsqueeze(0).unsqueeze(1).expand(B, -1, -1, -1) # (B, 1, H, W)
-        
-        outer_grid = getattr(self, f"{view_name}_outer_grid").unsqueeze(0).expand(B, -1, -1, -1)
-        outer_mask = getattr(self, f"{view_name}_outer_mask").unsqueeze(0).unsqueeze(1).expand(B, -1, -1, -1) # (B, 1, H, W)
+        dtype = skins.dtype
+        inner_grid = getattr(self, f"{view_name}_inner_grid").unsqueeze(0).expand(B, -1, -1, -1).to(dtype=dtype)
+        inner_mask = getattr(self, f"{view_name}_inner_mask").unsqueeze(0).unsqueeze(1).expand(B, -1, -1, -1).to(dtype=dtype) # (B, 1, H, W)
+        outer_grid = getattr(self, f"{view_name}_outer_grid").unsqueeze(0).expand(B, -1, -1, -1).to(dtype=dtype)
+        outer_mask = getattr(self, f"{view_name}_outer_mask").unsqueeze(0).unsqueeze(1).expand(B, -1, -1, -1).to(dtype=dtype) # (B, 1, H, W)
         
         # 1. Sample inner layer
         # sampled has shape (B, 4, H_out, W_out)
         inner_sampled = F.grid_sample(skins, inner_grid, mode='bilinear', padding_mode='zeros', align_corners=True)
         # Apply static visibility mask
         inner_sampled = inner_sampled * inner_mask
-        
-        # 2. Sample outer layer
+
         outer_sampled = F.grid_sample(skins, outer_grid, mode='bilinear', padding_mode='zeros', align_corners=True)
-        # Apply static visibility mask
         outer_sampled = outer_sampled * outer_mask
-        
-        # 3. Alpha blend outer over inner
-        # We extract RGB and Alpha for inner and outer layers
+
         inner_rgb = inner_sampled[:, :3, :, :]
         inner_alpha = inner_sampled[:, 3:4, :, :]
-        
         outer_rgb = outer_sampled[:, :3, :, :]
-        outer_alpha = outer_sampled[:, 3:4, :, :] # This is the dynamic alpha of the outer layer
-        
+        outer_alpha = outer_sampled[:, 3:4, :, :]
+
         # Background color
-        bg = self.bg_color.view(1, 3, 1, 1).expand(B, -1, inner_rgb.shape[2], inner_rgb.shape[3])
-        
+        bg = self.bg_color.view(1, 3, 1, 1).expand(B, -1, inner_rgb.shape[2], inner_rgb.shape[3]).to(dtype=dtype)
+
         # Composite inner layer over background
         # Note: Minecraft skin inner layers are usually opaque, but we blend using alpha to support transparency if any.
         inner_composite = inner_alpha * inner_rgb + (1.0 - inner_alpha) * bg
-        
-        # Composite outer layer over inner composite
         final_rgb = outer_alpha * outer_rgb + (1.0 - outer_alpha) * inner_composite
-        
-        # Calculate final alpha mask (for background/foreground separation)
         final_alpha = outer_alpha + (1.0 - outer_alpha) * inner_alpha
+
+        composite_grid_name = f"{view_name}_composite_grid_layers"
+        composite_decor_name = f"{view_name}_composite_is_decor_layers"
+        if hasattr(self, composite_grid_name) and hasattr(self, composite_decor_name):
+            composite_grid_layers = getattr(self, composite_grid_name).to(dtype=dtype)
+            composite_mask_layers = getattr(self, f"{view_name}_composite_mask_layers").to(dtype=dtype)
+            composite_is_decor_layers = getattr(self, composite_decor_name)
+            num_layers = composite_grid_layers.shape[0]
+            out_h, out_w = composite_grid_layers.shape[1:3]
+
+            composite_grid = composite_grid_layers.unsqueeze(0).expand(B, -1, -1, -1, -1)
+            composite_grid = composite_grid.reshape(B * num_layers, out_h, out_w, 2)
+            skin_layers = skins.unsqueeze(1).expand(-1, num_layers, -1, -1, -1)
+            skin_layers = skin_layers.reshape(B * num_layers, C, H_in, W_in)
+            composite_sampled = F.grid_sample(
+                skin_layers,
+                composite_grid,
+                mode='bilinear',
+                padding_mode='zeros',
+                align_corners=True,
+            )
+            composite_sampled = composite_sampled.reshape(B, num_layers, C, out_h, out_w)
+            composite_mask = composite_mask_layers.unsqueeze(0).unsqueeze(2).expand(B, -1, -1, -1, -1)
+            composite_sampled = composite_sampled * composite_mask
+
+            composite_render_rgb = bg
+            composite_render_alpha = torch.zeros_like(final_alpha)
+            for layer_index in range(num_layers - 1, -1, -1):
+                layer = composite_sampled[:, layer_index]
+                layer_rgb = layer[:, :3]
+                layer_alpha = layer[:, 3:4]
+                composite_render_rgb = layer_alpha * layer_rgb + (1.0 - layer_alpha) * composite_render_rgb
+                composite_render_alpha = layer_alpha + (1.0 - layer_alpha) * composite_render_alpha
+
+            layer_alpha = composite_sampled[:, :, 3:4]
+            visible = (layer_alpha > 1e-4) & (composite_mask > 0.5)
+            layer_indices = torch.arange(num_layers, device=skins.device).view(1, num_layers, 1, 1, 1)
+            fallback_indices = torch.full(visible.shape, num_layers, device=skins.device, dtype=torch.long)
+            visible_indices = torch.where(visible, layer_indices, fallback_indices)
+            first_visible_index = visible_indices.amin(dim=1)
+            has_visible = first_visible_index < num_layers
+
+            decor_layers = composite_is_decor_layers.unsqueeze(0).unsqueeze(2).expand(B, -1, -1, -1, -1)
+            first_layer = layer_indices == first_visible_index.unsqueeze(1)
+            first_visible_is_decor = (visible & first_layer & decor_layers).any(dim=1)
+            trust_composite = has_visible & (first_visible_is_decor | (first_visible_index <= 1))
+
+            final_rgb = torch.where(trust_composite, composite_render_rgb, final_rgb)
+            final_alpha = torch.where(trust_composite, composite_render_alpha, final_alpha)
         
         return torch.cat([final_rgb, final_alpha], dim=1)
 

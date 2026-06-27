@@ -7,7 +7,7 @@ from PIL import Image
 from mc_skin_utils import mc_render
 from differentiable_renderer import DifferentiableRenderer
 
-def run_tests():
+def run_tests(selected_views=None):
     # Find a test skin
     skin_path = os.path.join(os.path.dirname(__file__), "skins", "lowpoly", "408097.png")
     if not os.path.exists(skin_path):
@@ -166,8 +166,18 @@ def run_tests():
         'rot_leg_left': (0,0,0),
     }
     
-    print(f"Running rendering comparison for all {len(views)} views...")
+    if selected_views is not None:
+        selected_views = [view.strip() for view in selected_views.split(",") if view.strip()]
+        missing_views = [view for view in selected_views if view not in views]
+        if missing_views:
+            raise ValueError(f"Unknown views {missing_views}. Available views: {', '.join(views)}")
+        selected_views = set(selected_views)
+
+    view_count = len(selected_views) if selected_views is not None else len(views)
+    print(f"Running rendering comparison for {view_count} views...")
     for view_name, params in views.items():
+        if selected_views is not None and view_name not in selected_views:
+            continue
         print(f"\n--- Testing View: {view_name} ---")
         rot_args = walk_rot if params["walk"] else static_rot
         output_size = params["output_size"]
@@ -220,4 +230,9 @@ def run_tests():
             print(f"FAIL: PyTorch renderer deviates from PyVista for {view_name}.")
             
 if __name__ == "__main__":
-    run_tests()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Compare PyVista and PyTorch differentiable renderer outputs.")
+    parser.add_argument("--views", default=None, help="Optional comma-separated subset of view names to test.")
+    args = parser.parse_args()
+    run_tests(selected_views=args.views)
