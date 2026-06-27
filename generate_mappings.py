@@ -34,7 +34,7 @@ def generate_coordinate_skins():
                 
     return inner_skin, outer_skin
 
-def render_and_save_mappings():
+def render_and_save_mappings(selected_views=None):
     inner_skin, outer_skin = generate_coordinate_skins()
     
     full_part = ['head', 'body', 'left_arm', 'right_arm', 'left_leg', 'right_leg']
@@ -48,6 +48,14 @@ def render_and_save_mappings():
         "walk_perspective_back": {
             "cam_front": (-0.3, 0.4, -0.5), "zoom": 0.22, "look_at_y": 12, "walk": True,
             "core_display": full_part, "decor_display": full_part, "output_size": (768, 920)
+        },
+        "walk_perspective_ortho": {
+            "cam_front": (0.3, 0.1, 0.5), "zoom": 0.23, "look_at_y": 16, "walk": True,
+            "core_display": full_part, "decor_display": full_part, "output_size": (768, 920), "ortho": True
+        },
+        "walk_perspective_back_ortho": {
+            "cam_front": (-0.3, 0.1, -0.5), "zoom": 0.23, "look_at_y": 16, "walk": True,
+            "core_display": full_part, "decor_display": full_part, "output_size": (768, 920), "ortho": True
         },
         "static_front": {
             "cam_front": (0.0, 0.0, 0.5), "zoom": 0.35, "look_at_y": 12, "walk": False,
@@ -141,6 +149,13 @@ def render_and_save_mappings():
     
     mappings_dir = os.path.join(os.path.dirname(__file__), "mappings")
     os.makedirs(mappings_dir, exist_ok=True)
+
+    if selected_views is not None:
+        selected_views = [view.strip() for view in selected_views.split(",") if view.strip()]
+        missing_views = [view for view in selected_views if view not in views]
+        if missing_views:
+            raise ValueError(f"Unknown views {missing_views}. Available views: {', '.join(views)}")
+        selected_views = set(selected_views)
     
     # Default walk rotation angles matching build_target_img.py
     walk_rot = {
@@ -161,6 +176,8 @@ def render_and_save_mappings():
     }
     
     for view_name, params in views.items():
+        if selected_views is not None and view_name not in selected_views:
+            continue
         print(f"Generating mapping for view: {view_name}...")
         rot_args = walk_rot if params["walk"] else static_rot
         output_size = params["output_size"]
@@ -178,6 +195,7 @@ def render_and_save_mappings():
             core_display=params["core_display"],
             decor_display=[], # We render core only for inner mapping
             rot_args=rot_args,
+            ortho=params.get("ortho", False),
             off_screen=True
         )
         
@@ -194,6 +212,7 @@ def render_and_save_mappings():
             core_display=[], # We render overlay only for outer mapping
             decor_display=params["decor_display"],
             rot_args=rot_args,
+            ortho=params.get("ortho", False),
             off_screen=True
         )
         
@@ -231,4 +250,9 @@ def render_and_save_mappings():
         print(f"Saved {view_name}_mapping.pt (W={W}, H={H})")
 
 if __name__ == "__main__":
-    render_and_save_mappings()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Generate differentiable renderer UV mapping files.")
+    parser.add_argument("--views", default=None, help="Optional comma-separated subset of view names to generate.")
+    args = parser.parse_args()
+    render_and_save_mappings(selected_views=args.views)
