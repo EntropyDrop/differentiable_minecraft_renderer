@@ -11,7 +11,7 @@ from config import views, walk_rot, static_rot, walk_offset, static_offset
 
 def run_tests(selected_views=None):
     # Find a test skin
-    skin_path = os.path.join(os.path.dirname(__file__), "skins", "8882000.png")
+    skin_path = os.path.join(os.path.dirname(__file__), "skins", "a5c3a615940c35cf.png")
     if not os.path.exists(skin_path):
         raise FileNotFoundError(f"Test skin not found at: {skin_path}")
         
