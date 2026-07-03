@@ -11,7 +11,7 @@ from config import views, walk_rot, static_rot, walk_offset, static_offset
 
 def run_tests(selected_views=None):
     # Find a test skin
-    skin_path = os.path.join(os.path.dirname(__file__), "skins", "a5c3a615940c35cf.png")
+    skin_path = os.path.join(os.path.dirname(__file__), "skins", "010.png")
     if not os.path.exists(skin_path):
         raise FileNotFoundError(f"Test skin not found at: {skin_path}")
         
@@ -20,8 +20,8 @@ def run_tests(selected_views=None):
     skin_img = Image.open(skin_path).convert("RGBA")
     
     # Run voxel consistency resolver if any
-    from mc_skin_utils.mc_voxel_texture_resolver import resolve_voxel_consistency
-    skin_img = resolve_voxel_consistency(skin_img)
+    #from mc_skin_utils.mc_voxel_texture_resolver import resolve_voxel_consistency
+    #skin_img = resolve_voxel_consistency(skin_img)
     skin_np = np.array(skin_img)
     
     # Clean semi-transparency to match ensure_valid_skin preprocessing in build_target_img
