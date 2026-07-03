@@ -3,30 +3,31 @@
 full_part = ['head', 'body', 'left_arm', 'right_arm', 'left_leg', 'right_leg']
 
 zoom = 0.23
+size = (256, 512)
 views = {
     "walk_front_both_layer_ortho": {
         "cam_front": (-0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
-        "core_display": full_part, "decor_display": full_part, "output_size": (512, 1024), "ortho": True
+        "core_display": full_part, "decor_display": full_part, "output_size": size, "ortho": True
     },
     "walk_back_both_layer_ortho": {
         "cam_front": (0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
-        "core_display": full_part, "decor_display": full_part, "output_size": (512, 1024), "ortho": True
+        "core_display": full_part, "decor_display": full_part, "output_size": size, "ortho": True
     },
     "walk_front_base_layer_ortho": {
         "cam_front": (-0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
-        "core_display": full_part, "decor_display": [], "output_size": (512, 1024), "ortho": True
+        "core_display": full_part, "decor_display": [], "output_size": size, "ortho": True
     },
     "walk_back_base_layer_ortho": {
         "cam_front": (0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
-        "core_display": full_part, "decor_display": [], "output_size": (512, 1024), "ortho": True
+        "core_display": full_part, "decor_display": [], "output_size": size, "ortho": True
     },
     "static_front": {
         "cam_front": (-0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": False,
-        "core_display": full_part, "decor_display": full_part, "output_size": (512, 1024), "ortho": True
+        "core_display": full_part, "decor_display": full_part, "output_size": size, "ortho": True
     },
     "static_back": {
         "cam_front": (0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": False,
-        "core_display": full_part, "decor_display": full_part, "output_size": (512, 1024), "ortho": True
+        "core_display": full_part, "decor_display": full_part, "output_size": size, "ortho": True
     },
 }
 
