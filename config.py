@@ -3,7 +3,7 @@
 full_part = ['head', 'body', 'left_arm', 'right_arm', 'left_leg', 'right_leg']
 
 zoom = 0.23
-size = (256, 512)
+size = (512, 1024)
 views = {
     "walk_front_both_layer_ortho": {
         "cam_front": (-0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
