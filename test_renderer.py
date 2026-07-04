@@ -7,25 +7,26 @@ from PIL import Image
 from mc_skin_utils import mc_render
 from differentiable_renderer import DifferentiableRenderer
 
-from config import views, walk_rot, static_rot, walk_offset, static_offset
+from config import views, walk_rot, static_rot, walk_offset, static_offset, get_views, parse_sizes
 
-def run_tests(selected_views=None):
+def run_tests(selected_views=None, size_arg=None):
+    if size_arg is not None:
+        parsed = parse_sizes(size_arg)
+        test_views = get_views(parsed[0])
+    else:
+        test_views = views
+
     # Find a test skin
-    skin_path = os.path.join(os.path.dirname(__file__), "skins", "010.png")
+    skin_path = os.path.join(os.path.dirname(__file__), "skins", "a5c3a615940c35cf.png")
     if not os.path.exists(skin_path):
         raise FileNotFoundError(f"Test skin not found at: {skin_path}")
         
     print(f"Loading test skin: {skin_path}")
     # Load and preprocess using standard PIL
     skin_img = Image.open(skin_path).convert("RGBA")
-    
-    # Run voxel consistency resolver if any
-    #from mc_skin_utils.mc_voxel_texture_resolver import resolve_voxel_consistency
-    #skin_img = resolve_voxel_consistency(skin_img)
     skin_np = np.array(skin_img)
     
     # Clean semi-transparency to match ensure_valid_skin preprocessing in build_target_img
-    # Any alpha between 0 and 255 is made fully opaque (255)
     alpha = skin_np[..., 3]
     semi_transparent = (alpha > 0) & (alpha < 255)
     skin_np[semi_transparent, 3] = 255
@@ -33,8 +34,15 @@ def run_tests(selected_views=None):
     # Prepare PyTorch tensor (B, C, H, W), normalized to [0, 1]
     skin_tensor = torch.tensor(skin_np, dtype=torch.float32).permute(2, 0, 1).unsqueeze(0) / 255.0
     
+    # Determine mapping dir for test_views size
+    sample_param = next(iter(test_views.values()))
+    w_out, h_out = sample_param["output_size"]
+    target_mappings_dir = os.path.join(os.path.dirname(__file__), f"mappings_{w_out}x{h_out}")
+    if not os.path.exists(target_mappings_dir):
+        target_mappings_dir = None
+
     # Initialize PyTorch differentiable renderer
-    renderer = DifferentiableRenderer(bg_color=(1/255, 1/255, 1/255))
+    renderer = DifferentiableRenderer(mappings_dir=target_mappings_dir, bg_color=(1/255, 1/255, 1/255))
     
     # Create output directories
     output_dir = os.path.join(os.path.dirname(__file__), "test_outputs")
@@ -42,14 +50,14 @@ def run_tests(selected_views=None):
     
     if selected_views is not None:
         selected_views = [view.strip() for view in selected_views.split(",") if view.strip()]
-        missing_views = [view for view in selected_views if view not in views]
+        missing_views = [view for view in selected_views if view not in test_views]
         if missing_views:
-            raise ValueError(f"Unknown views {missing_views}. Available views: {', '.join(views)}")
+            raise ValueError(f"Unknown views {missing_views}. Available views: {', '.join(test_views)}")
         selected_views = set(selected_views)
 
-    view_count = len(selected_views) if selected_views is not None else len(views)
-    print(f"Running rendering comparison for {view_count} views...")
-    for view_name, params in views.items():
+    view_count = len(selected_views) if selected_views is not None else len(test_views)
+    print(f"Running rendering comparison for {view_count} views (size {w_out}x{h_out})...")
+    for view_name, params in test_views.items():
         if selected_views is not None and view_name not in selected_views:
             continue
         print(f"\n--- Testing View: {view_name} ---")
@@ -90,16 +98,12 @@ def run_tests(selected_views=None):
         print(f"Saved PyTorch: {pt_img_path}")
         
         # 3. Calculate metrics
-        # Convert both to float for MSE calculation
         pv_float = pv_render.astype(np.float32) / 255.0
         pt_float = pt_render_np.astype(np.float32) / 255.0
         
-        # Compute MSE
         mse = np.mean((pv_float - pt_float) ** 2)
         print(f"MSE between PyVista and PyTorch for {view_name}: {mse:.6f}")
         
-        # Check if they are virtually identical
-        # (A tiny threshold is fine due to PyTorch grid_sample bilinear vs VTK cell coloring subpixel interpolation)
         if mse < 0.005:
             print(f"PASS: PyTorch renderer matches PyVista for {view_name}.")
         else:
@@ -110,5 +114,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Compare PyVista and PyTorch differentiable renderer outputs.")
     parser.add_argument("--views", default=None, help="Optional comma-separated subset of view names to test.")
+    parser.add_argument("--size", default=None, help="Optional size specification, e.g. 512x1024.")
     args = parser.parse_args()
-    run_tests(selected_views=args.views)
+    run_tests(selected_views=args.views, size_arg=args.size)

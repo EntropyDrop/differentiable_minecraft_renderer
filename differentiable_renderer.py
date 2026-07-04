@@ -7,7 +7,21 @@ class DifferentiableRenderer(nn.Module):
     def __init__(self, mappings_dir=None, bg_color=(128/255, 128/255, 128/255)):
         super().__init__()
         if mappings_dir is None:
-            mappings_dir = os.path.join(os.path.dirname(__file__), "mappings")
+            env_mappings_dir = os.environ.get("RENDERER_MAPPINGS_DIR")
+            if env_mappings_dir and os.path.exists(env_mappings_dir):
+                mappings_dir = env_mappings_dir
+            else:
+                from config import size as config_size
+                base_dir = os.path.dirname(__file__)
+                size_dir_name = f"mappings_{config_size[0]}x{config_size[1]}"
+                candidate_dir = os.path.join(base_dir, size_dir_name)
+                default_dir = os.path.join(base_dir, "mappings")
+                if os.path.exists(candidate_dir):
+                    mappings_dir = candidate_dir
+                elif os.path.exists(default_dir):
+                    mappings_dir = default_dir
+                else:
+                    mappings_dir = candidate_dir
             
         self.mappings_dir = mappings_dir
         self.register_buffer("bg_color", torch.tensor(bg_color, dtype=torch.float32))

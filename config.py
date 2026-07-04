@@ -1,35 +1,90 @@
 # Shared configurations for differentiable_minecraft_renderer
+import os
+import re
 
 full_part = ['head', 'body', 'left_arm', 'right_arm', 'left_leg', 'right_leg']
 
 zoom = 0.23
-size = (512, 1024)
-views = {
-    "walk_front_both_layer_ortho": {
-        "cam_front": (-0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
-        "core_display": full_part, "decor_display": full_part, "output_size": size, "ortho": True
-    },
-    "walk_back_both_layer_ortho": {
-        "cam_front": (0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
-        "core_display": full_part, "decor_display": full_part, "output_size": size, "ortho": True
-    },
-    "walk_front_base_layer_ortho": {
-        "cam_front": (-0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
-        "core_display": full_part, "decor_display": [], "output_size": size, "ortho": True
-    },
-    "walk_back_base_layer_ortho": {
-        "cam_front": (0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
-        "core_display": full_part, "decor_display": [], "output_size": size, "ortho": True
-    },
-    "static_front": {
-        "cam_front": (-0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": False,
-        "core_display": full_part, "decor_display": full_part, "output_size": size, "ortho": True
-    },
-    "static_back": {
-        "cam_front": (0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": False,
-        "core_display": full_part, "decor_display": full_part, "output_size": size, "ortho": True
-    },
-}
+
+def parse_size_tuple(s):
+    s = s.strip().strip("()[]")
+    for sep in ["x", "X", ","]:
+        if sep in s:
+            parts = [p.strip() for p in s.split(sep) if p.strip()]
+            if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+                return (int(parts[0]), int(parts[1]))
+    parts = s.split()
+    if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+        return (int(parts[0]), int(parts[1]))
+    raise ValueError(f"Invalid size specification: '{s}'")
+
+def parse_sizes(env_val):
+    if not env_val:
+        return [(256, 512), (512, 1024)]
+    
+    pattern = r'\(?\s*(\d+)\s*[\times,X\s]\s*(\d+)\s*\)?'
+    matches = re.findall(pattern, env_val)
+    if matches:
+        res = [(int(w), int(h)) for w, h in matches]
+        if len(res) > 0:
+            return res
+
+    clean_val = env_val.replace(";", ",")
+    items = [item.strip() for item in clean_val.split(",") if item.strip()]
+    parsed = []
+    for item in items:
+        try:
+            parsed.append(parse_size_tuple(item))
+        except ValueError:
+            pass
+    if parsed:
+        return parsed
+        
+    return [(256, 512), (512, 1024)]
+
+env_size_str = (
+    os.environ.get("RENDERER_SIZES")
+    or os.environ.get("RENDERER_SIZE")
+    or os.environ.get("RENDER_SIZE")
+    or os.environ.get("SIZE")
+)
+sizes = parse_sizes(env_size_str)
+size = sizes[0]
+
+def create_views(output_size):
+    return {
+        "walk_front_both_layer_ortho": {
+            "cam_front": (-0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
+            "core_display": full_part, "decor_display": full_part, "output_size": output_size, "ortho": True
+        },
+        "walk_back_both_layer_ortho": {
+            "cam_front": (0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
+            "core_display": full_part, "decor_display": full_part, "output_size": output_size, "ortho": True
+        },
+        "walk_front_base_layer_ortho": {
+            "cam_front": (-0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
+            "core_display": full_part, "decor_display": [], "output_size": output_size, "ortho": True
+        },
+        "walk_back_base_layer_ortho": {
+            "cam_front": (0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
+            "core_display": full_part, "decor_display": [], "output_size": output_size, "ortho": True
+        },
+        "static_front": {
+            "cam_front": (-0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": False,
+            "core_display": full_part, "decor_display": full_part, "output_size": output_size, "ortho": True
+        },
+        "static_back": {
+            "cam_front": (0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": False,
+            "core_display": full_part, "decor_display": full_part, "output_size": output_size, "ortho": True
+        },
+    }
+
+def get_views(output_size=None):
+    if output_size is None:
+        output_size = size
+    return create_views(output_size)
+
+views = create_views(size)
 
 # Default walk rotation angles matching build_target_img.py
 walk_rot = {

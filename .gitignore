@@ -46,4 +46,4 @@ Thumbs.db
 # Project-specific temp outputs
 test_outputs/
 
-mappings
+mappings_*

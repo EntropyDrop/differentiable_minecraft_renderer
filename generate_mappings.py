@@ -186,98 +186,56 @@ def generate_coordinate_skins():
                 
     return inner_skin, outer_skin, skin_decor_mask
 
-from config import views, walk_rot, static_rot, walk_offset, static_offset
+from config import sizes as config_sizes, get_views, walk_rot, static_rot, walk_offset, static_offset, parse_sizes
 
-def render_and_save_mappings(selected_views=None, outer_layers=1, composite_layers=6):
+def render_and_save_mappings(selected_views=None, outer_layers=1, composite_layers=6, target_sizes=None):
+    if target_sizes is None:
+        target_sizes = config_sizes
+    elif isinstance(target_sizes, str):
+        target_sizes = parse_sizes(target_sizes)
+
     inner_skin, outer_skin, skin_decor_mask = generate_coordinate_skins()
     composite_skin = np.maximum(inner_skin, outer_skin)
     
-    mappings_dir = os.path.join(os.path.dirname(__file__), "mappings")
-    os.makedirs(mappings_dir, exist_ok=True)
+    for size_tuple in target_sizes:
+        W, H = size_tuple
+        mappings_dir_name = f"mappings_{W}x{H}"
+        mappings_dir = os.path.join(os.path.dirname(__file__), mappings_dir_name)
+        os.makedirs(mappings_dir, exist_ok=True)
 
-    if selected_views is not None:
-        selected_views = [view.strip() for view in selected_views.split(",") if view.strip()]
-        missing_views = [view for view in selected_views if view not in views]
-        if missing_views:
-            raise ValueError(f"Unknown views {missing_views}. Available views: {', '.join(views)}")
-        selected_views = set(selected_views)
-    
-    for view_name, params in views.items():
-        if selected_views is not None and view_name not in selected_views:
-            continue
-        print(f"Generating mapping for view: {view_name}...")
-        rot_args = walk_rot if params["walk"] else static_rot
-        offset_args = walk_offset if params["walk"] else static_offset
-        output_size = params["output_size"]
-        
-        # Render inner layer
-        inner_rendered = mc_render.render_skin(
-            skin=Image.fromarray(inner_skin),
-            output_size=output_size,
-            cam_front=params["cam_front"],
-            zoom=params["zoom"],
-            look_at_y=params["look_at_y"],
-            use_voxels=False,
-            light=False,
-            transparent_background=True,
-            core_display=params["core_display"],
-            decor_display=[], # We render core only for inner mapping
-            rot_args=rot_args,
-            offset_args=offset_args,
-            ortho=params.get("ortho", False),
-            off_screen=True
-        )
-        
-        W, H = output_size
-        
-        # Extract inner mapping
-        inner_uv_map, inner_mask, _ = _extract_uv_mapping(inner_rendered, (H, W))
-        
-        # Extract outer mapping layers by repeatedly peeling the visible overlay UV cells.
-        outer_uv_layers = []
-        outer_mask_layers = []
-        remaining_outer_skin = outer_skin.copy()
-        for layer_index in range(max(outer_layers, 1)):
-            outer_rendered = mc_render.render_skin(
-                skin=Image.fromarray(remaining_outer_skin),
-                output_size=output_size,
-                cam_front=params["cam_front"],
-                zoom=params["zoom"],
-                look_at_y=params["look_at_y"],
-                use_voxels=False,
-                light=False,
-                transparent_background=True,
-                core_display=[], # We render overlay only for outer mapping
-                decor_display=params["decor_display"],
-                rot_args=rot_args,
-                offset_args=offset_args,
-                ortho=params.get("ortho", False),
-                off_screen=True
-            )
+        # Sync to default 'mappings' directory if size is (256, 512) or the first size
+        default_mappings_dir = os.path.join(os.path.dirname(__file__), "mappings")
+        os.makedirs(default_mappings_dir, exist_ok=True)
 
-            outer_uv_map, outer_mask, visible_uv = _extract_uv_mapping(outer_rendered, (H, W))
-            if visible_uv.size:
-                remaining_outer_skin[visible_uv[:, 1], visible_uv[:, 0], 3] = 0
+        current_views = get_views((W, H))
 
-            outer_uv_layers.append(outer_uv_map)
-            outer_mask_layers.append(outer_mask)
-            print(f"  outer layer {layer_index}: {int(outer_mask.sum())} pixels")
-            if outer_mask.sum() == 0:
-                break
+        if selected_views is not None:
+            if isinstance(selected_views, str):
+                views_list = [view.strip() for view in selected_views.split(",") if view.strip()]
+            else:
+                views_list = list(selected_views)
+            missing_views = [view for view in views_list if view not in current_views]
+            if missing_views:
+                raise ValueError(f"Unknown views {missing_views}. Available views: {', '.join(current_views)}")
+            views_set = set(views_list)
+        else:
+            views_set = None
 
-        while len(outer_uv_layers) < max(outer_layers, 1):
-            outer_uv_layers.append(np.zeros((H, W, 2), dtype=np.float32) - 1.0)
-            outer_mask_layers.append(np.zeros((H, W), dtype=np.float32))
+        print(f"\n==========================================")
+        print(f"Generating mappings for size: W={W}, H={H} -> {mappings_dir_name}/")
+        print(f"==========================================")
 
-        outer_uv_layers = np.stack(outer_uv_layers, axis=0)
-        outer_mask_layers = np.stack(outer_mask_layers, axis=0)
-
-        composite_uv_layers = []
-        composite_mask_layers = []
-        remaining_composite_skin = composite_skin.copy()
-        for layer_index in range(max(composite_layers, 1)):
-            composite_rendered = mc_render.render_skin(
-                skin=Image.fromarray(remaining_composite_skin),
+        for view_name, params in current_views.items():
+            if views_set is not None and view_name not in views_set:
+                continue
+            print(f"Generating mapping for view: {view_name} ({W}x{H})...")
+            rot_args = walk_rot if params["walk"] else static_rot
+            offset_args = walk_offset if params["walk"] else static_offset
+            output_size = params["output_size"]
+            
+            # Render inner layer
+            inner_rendered = mc_render.render_skin(
+                skin=Image.fromarray(inner_skin),
                 output_size=output_size,
                 cam_front=params["cam_front"],
                 zoom=params["zoom"],
@@ -286,99 +244,167 @@ def render_and_save_mappings(selected_views=None, outer_layers=1, composite_laye
                 light=False,
                 transparent_background=True,
                 core_display=params["core_display"],
-                decor_display=params["decor_display"],
+                decor_display=[], # We render core only for inner mapping
                 rot_args=rot_args,
                 offset_args=offset_args,
                 ortho=params.get("ortho", False),
                 off_screen=True
             )
+            
+            # Extract inner mapping
+            inner_uv_map, inner_mask, _ = _extract_uv_mapping(inner_rendered, (H, W))
+            
+            # Extract outer mapping layers by repeatedly peeling the visible overlay UV cells.
+            outer_uv_layers = []
+            outer_mask_layers = []
+            remaining_outer_skin = outer_skin.copy()
+            for layer_index in range(max(outer_layers, 1)):
+                outer_rendered = mc_render.render_skin(
+                    skin=Image.fromarray(remaining_outer_skin),
+                    output_size=output_size,
+                    cam_front=params["cam_front"],
+                    zoom=params["zoom"],
+                    look_at_y=params["look_at_y"],
+                    use_voxels=False,
+                    light=False,
+                    transparent_background=True,
+                    core_display=[], # We render overlay only for outer mapping
+                    decor_display=params["decor_display"],
+                    rot_args=rot_args,
+                    offset_args=offset_args,
+                    ortho=params.get("ortho", False),
+                    off_screen=True
+                )
 
-            composite_uv_map, composite_mask, visible_uv = _extract_uv_mapping(composite_rendered, (H, W))
-            if visible_uv.size:
-                remaining_composite_skin[visible_uv[:, 1], visible_uv[:, 0], 3] = 0
+                outer_uv_map, outer_mask, visible_uv = _extract_uv_mapping(outer_rendered, (H, W))
+                if visible_uv.size:
+                    remaining_outer_skin[visible_uv[:, 1], visible_uv[:, 0], 3] = 0
 
-            composite_uv_layers.append(composite_uv_map)
-            composite_mask_layers.append(composite_mask)
-            print(f"  composite layer {layer_index}: {int(composite_mask.sum())} pixels")
-            if composite_mask.sum() == 0:
-                break
+                outer_uv_layers.append(outer_uv_map)
+                outer_mask_layers.append(outer_mask)
+                print(f"  outer layer {layer_index}: {int(outer_mask.sum())} pixels")
+                if outer_mask.sum() == 0:
+                    break
 
-        while len(composite_uv_layers) < max(composite_layers, 1):
-            composite_uv_layers.append(np.zeros((H, W, 2), dtype=np.float32) - 1.0)
-            composite_mask_layers.append(np.zeros((H, W), dtype=np.float32))
+            while len(outer_uv_layers) < max(outer_layers, 1):
+                outer_uv_layers.append(np.zeros((H, W, 2), dtype=np.float32) - 1.0)
+                outer_mask_layers.append(np.zeros((H, W), dtype=np.float32))
 
-        composite_uv_layers = np.stack(composite_uv_layers, axis=0)
-        composite_mask_layers = np.stack(composite_mask_layers, axis=0)
-        composite_is_decor_layers = np.zeros_like(composite_mask_layers, dtype=np.bool_)
-        decor_mask = skin_decor_mask[:, :, 3] > 0
-        for layer_index in range(composite_uv_layers.shape[0]):
-            layer_mask = composite_mask_layers[layer_index] > 0
-            u = np.clip(composite_uv_layers[layer_index, ..., 0].astype(np.int16), 0, 63)
-            v = np.clip(composite_uv_layers[layer_index, ..., 1].astype(np.int16), 0, 63)
-            composite_is_decor_layers[layer_index] = layer_mask & decor_mask[v, u]
+            outer_uv_layers = np.stack(outer_uv_layers, axis=0)
+            outer_mask_layers = np.stack(outer_mask_layers, axis=0)
 
-        geometry_uv_layers = []
-        geometry_mask_layers = []
-        geometry_depth_layers = []
-        geometry_meshes = mc_render.build_minecraft_model(
-            composite_skin,
-            core_display=params["core_display"],
-            decor_display=params["decor_display"],
-            use_voxels=False,
-            offset_args=offset_args,
-            **rot_args,
-        )
-        for geometry_mesh in _iter_display_meshes(
-            geometry_meshes,
-            params["core_display"],
-            params["decor_display"],
-        ):
-            geometry_rendered, geometry_depth = _render_mesh_mapping(
-                geometry_mesh,
-                params,
-                output_size,
+            composite_uv_layers = []
+            composite_mask_layers = []
+            remaining_composite_skin = composite_skin.copy()
+            for layer_index in range(max(composite_layers, 1)):
+                composite_rendered = mc_render.render_skin(
+                    skin=Image.fromarray(remaining_composite_skin),
+                    output_size=output_size,
+                    cam_front=params["cam_front"],
+                    zoom=params["zoom"],
+                    look_at_y=params["look_at_y"],
+                    use_voxels=False,
+                    light=False,
+                    transparent_background=True,
+                    core_display=params["core_display"],
+                    decor_display=params["decor_display"],
+                    rot_args=rot_args,
+                    offset_args=offset_args,
+                    ortho=params.get("ortho", False),
+                    off_screen=True
+                )
+
+                composite_uv_map, composite_mask, visible_uv = _extract_uv_mapping(composite_rendered, (H, W))
+                if visible_uv.size:
+                    remaining_composite_skin[visible_uv[:, 1], visible_uv[:, 0], 3] = 0
+
+                composite_uv_layers.append(composite_uv_map)
+                composite_mask_layers.append(composite_mask)
+                print(f"  composite layer {layer_index}: {int(composite_mask.sum())} pixels")
+                if composite_mask.sum() == 0:
+                    break
+
+            while len(composite_uv_layers) < max(composite_layers, 1):
+                composite_uv_layers.append(np.zeros((H, W, 2), dtype=np.float32) - 1.0)
+                composite_mask_layers.append(np.zeros((H, W), dtype=np.float32))
+
+            composite_uv_layers = np.stack(composite_uv_layers, axis=0)
+            composite_mask_layers = np.stack(composite_mask_layers, axis=0)
+            composite_is_decor_layers = np.zeros_like(composite_mask_layers, dtype=np.bool_)
+            decor_mask = skin_decor_mask[:, :, 3] > 0
+            for layer_index in range(composite_uv_layers.shape[0]):
+                layer_mask = composite_mask_layers[layer_index] > 0
+                u = np.clip(composite_uv_layers[layer_index, ..., 0].astype(np.int16), 0, 63)
+                v = np.clip(composite_uv_layers[layer_index, ..., 1].astype(np.int16), 0, 63)
+                composite_is_decor_layers[layer_index] = layer_mask & decor_mask[v, u]
+
+            geometry_uv_layers = []
+            geometry_mask_layers = []
+            geometry_depth_layers = []
+            geometry_meshes = mc_render.build_minecraft_model(
+                composite_skin,
+                core_display=params["core_display"],
+                decor_display=params["decor_display"],
+                use_voxels=False,
+                offset_args=offset_args,
+                **rot_args,
             )
-            geometry_uv_map, geometry_mask, _ = _extract_uv_mapping(geometry_rendered, (H, W))
-            geometry_uv_layers.append(geometry_uv_map)
-            geometry_mask_layers.append(geometry_mask)
-            geometry_depth_layers.append(np.where(geometry_mask > 0, geometry_depth, -np.inf))
+            for geometry_mesh in _iter_display_meshes(
+                geometry_meshes,
+                params["core_display"],
+                params["decor_display"],
+            ):
+                geometry_rendered, geometry_depth = _render_mesh_mapping(
+                    geometry_mesh,
+                    params,
+                    output_size,
+                )
+                geometry_uv_map, geometry_mask, _ = _extract_uv_mapping(geometry_rendered, (H, W))
+                geometry_uv_layers.append(geometry_uv_map)
+                geometry_mask_layers.append(geometry_mask)
+                geometry_depth_layers.append(np.where(geometry_mask > 0, geometry_depth, -np.inf))
 
-        if geometry_uv_layers:
-            geometry_uv_layers = np.stack(geometry_uv_layers, axis=0)
-            geometry_mask_layers = np.stack(geometry_mask_layers, axis=0)
-            geometry_depth_layers = np.stack(geometry_depth_layers, axis=0).astype(np.float32)
-            geometry_sort_indices = np.argsort(geometry_depth_layers, axis=0).astype(np.int16)
-        else:
-            geometry_uv_layers = np.zeros((0, H, W, 2), dtype=np.float32) - 1.0
-            geometry_mask_layers = np.zeros((0, H, W), dtype=np.float32)
-            geometry_sort_indices = np.zeros((0, H, W), dtype=np.int16)
-        print(f"  geometry layers: {geometry_uv_layers.shape[0]}")
-        
-        # Convert to PyTorch tensors and save
-        mapping_data = {
-            "inner_uv_map": torch.tensor(inner_uv_map),
-            "inner_mask": torch.tensor(inner_mask),
-            "outer_uv_map": torch.tensor(outer_uv_layers[0]),
-            "outer_mask": torch.tensor(outer_mask_layers[0]),
-            "composite_uv_layers": torch.tensor(composite_uv_layers.astype(np.int16)),
-            "composite_masks": torch.tensor(composite_mask_layers.astype(np.bool_)),
-            "composite_is_decor_layers": torch.tensor(composite_is_decor_layers),
-            "geometry_uv_layers": torch.tensor(geometry_uv_layers.astype(np.int16)),
-            "geometry_masks": torch.tensor(geometry_mask_layers.astype(np.bool_)),
-            "geometry_sort_indices": torch.tensor(geometry_sort_indices),
-        }
-        if outer_layers > 1:
-            mapping_data["outer_uv_layers"] = torch.tensor(outer_uv_layers.astype(np.int16))
-            mapping_data["outer_masks"] = torch.tensor(outer_mask_layers.astype(np.bool_))
-        
-        torch.save(mapping_data, os.path.join(mappings_dir, f"{view_name}_mapping.pt"))
-        print(f"Saved {view_name}_mapping.pt (W={W}, H={H})")
+            if geometry_uv_layers:
+                geometry_uv_layers = np.stack(geometry_uv_layers, axis=0)
+                geometry_mask_layers = np.stack(geometry_mask_layers, axis=0)
+                geometry_depth_layers = np.stack(geometry_depth_layers, axis=0).astype(np.float32)
+                geometry_sort_indices = np.argsort(geometry_depth_layers, axis=0).astype(np.int16)
+            else:
+                geometry_uv_layers = np.zeros((0, H, W, 2), dtype=np.float32) - 1.0
+                geometry_mask_layers = np.zeros((0, H, W), dtype=np.float32)
+                geometry_sort_indices = np.zeros((0, H, W), dtype=np.int16)
+            print(f"  geometry layers: {geometry_uv_layers.shape[0]}")
+            
+            # Convert to PyTorch tensors and save
+            mapping_data = {
+                "inner_uv_map": torch.tensor(inner_uv_map),
+                "inner_mask": torch.tensor(inner_mask),
+                "outer_uv_map": torch.tensor(outer_uv_layers[0]),
+                "outer_mask": torch.tensor(outer_mask_layers[0]),
+                "composite_uv_layers": torch.tensor(composite_uv_layers.astype(np.int16)),
+                "composite_masks": torch.tensor(composite_mask_layers.astype(np.bool_)),
+                "composite_is_decor_layers": torch.tensor(composite_is_decor_layers),
+                "geometry_uv_layers": torch.tensor(geometry_uv_layers.astype(np.int16)),
+                "geometry_masks": torch.tensor(geometry_mask_layers.astype(np.bool_)),
+                "geometry_sort_indices": torch.tensor(geometry_sort_indices),
+            }
+            if outer_layers > 1:
+                mapping_data["outer_uv_layers"] = torch.tensor(outer_uv_layers.astype(np.int16))
+                mapping_data["outer_masks"] = torch.tensor(outer_mask_layers.astype(np.bool_))
+            
+            mapping_file_name = f"{view_name}_mapping.pt"
+            torch.save(mapping_data, os.path.join(mappings_dir, mapping_file_name))
+            print(f"Saved {mapping_file_name} in {mappings_dir_name} (W={W}, H={H})")
+
+            if size_tuple == (256, 512) or size_tuple == target_sizes[0]:
+                torch.save(mapping_data, os.path.join(default_mappings_dir, mapping_file_name))
 
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Generate differentiable renderer UV mapping files.")
     parser.add_argument("--views", default=None, help="Optional comma-separated subset of view names to generate.")
+    parser.add_argument("--sizes", default=None, help="Optional comma-separated sizes, e.g. 256x512,512x1024.")
     parser.add_argument("--outer_layers", type=int, default=1, help="Number of depth-peeled overlay-only UV layers.")
     parser.add_argument("--composite_layers", type=int, default=6, help="Number of depth-peeled combined UV layers.")
     args = parser.parse_args()
@@ -386,4 +412,5 @@ if __name__ == "__main__":
         selected_views=args.views,
         outer_layers=args.outer_layers,
         composite_layers=args.composite_layers,
+        target_sizes=args.sizes,
     )
