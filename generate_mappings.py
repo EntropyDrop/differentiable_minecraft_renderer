@@ -11,6 +11,11 @@ _UV_PALETTE_FLAT = None
 _UV_PALETTE_UVS = None
 _UV_PALETTE_TREE = None
 
+# mc_skin_utils infers the arm model from this otherwise-unused alpha texel.
+# Keep it opaque for every synthetic coordinate skin so overlay-only renders do
+# not accidentally switch to the three-pixel Alex arm geometry.
+_STEVE_ARM_MODEL_MARKER = (52, 47)
+
 _MESH_ENTRIES = (
     ("core", "head", 0),
     ("core", "body", 1),
@@ -183,6 +188,11 @@ def generate_coordinate_skins():
             if skin_decor_mask[y, x, 3] > 0:
                 outer_skin[y, x, :3] = uv_palette[y, x]
                 outer_skin[y, x, 3] = 255
+
+    marker_y, marker_x = _STEVE_ARM_MODEL_MARKER
+    for coordinate_skin in (inner_skin, outer_skin):
+        coordinate_skin[marker_y, marker_x, :3] = uv_palette[marker_y, marker_x]
+        coordinate_skin[marker_y, marker_x, 3] = 255
                 
     return inner_skin, outer_skin, skin_decor_mask
 

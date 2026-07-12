@@ -17,7 +17,7 @@ def run_tests(selected_views=None, size_arg=None):
         test_views = views
 
     # Find a test skin
-    skin_path = os.path.join(os.path.dirname(__file__), "skins", "a5c3a615940c35cf.png")
+    skin_path = os.path.join(os.path.dirname(__file__), "skins", "010.png")
     if not os.path.exists(skin_path):
         raise FileNotFoundError(f"Test skin not found at: {skin_path}")
         
