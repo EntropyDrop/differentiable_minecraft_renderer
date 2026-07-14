@@ -4,7 +4,7 @@ import re
 
 full_part = ['head', 'body', 'left_arm', 'right_arm', 'left_leg', 'right_leg']
 
-zoom = 0.23
+zoom = 0.25
 
 def parse_size_tuple(s):
     s = s.strip().strip("()[]")
