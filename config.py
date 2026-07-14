@@ -53,30 +53,38 @@ size = sizes[0]
 
 def create_views(output_size):
     return {
-        "walk_front_both_layer_ortho": {
+        "front1": {
             "cam_front": (-0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
             "core_display": full_part, "decor_display": full_part, "output_size": output_size, "ortho": True
         },
-        "walk_back_both_layer_ortho": {
+        "back1": {
             "cam_front": (0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
             "core_display": full_part, "decor_display": full_part, "output_size": output_size, "ortho": True
         },
-        "walk_front_base_layer_ortho": {
+        "front2": {
+            "cam_front": (0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
+            "core_display": full_part, "decor_display": full_part, "output_size": output_size, "ortho": True
+        },
+        "back2": {
+            "cam_front": (-0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
+            "core_display": full_part, "decor_display": full_part, "output_size": output_size, "ortho": True
+        },
+        "base_front1": {
             "cam_front": (-0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
             "core_display": full_part, "decor_display": [], "output_size": output_size, "ortho": True
         },
-        "walk_back_base_layer_ortho": {
+        "base_back1": {
             "cam_front": (0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
             "core_display": full_part, "decor_display": [], "output_size": output_size, "ortho": True
         },
-        "static_front": {
-            "cam_front": (-0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": False,
-            "core_display": full_part, "decor_display": full_part, "output_size": output_size, "ortho": True
-        },
-        "static_back": {
-            "cam_front": (0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": False,
-            "core_display": full_part, "decor_display": full_part, "output_size": output_size, "ortho": True
-        },
+        #"static_front": {
+        #    "cam_front": (-0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": False,
+        #    "core_display": full_part, "decor_display": full_part, "output_size": output_size, "ortho": True
+        #},
+        #"static_back": {
+        #    "cam_front": (0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": False,
+        #    "core_display": full_part, "decor_display": full_part, "output_size": output_size, "ortho": True
+        #},
     }
 
 def get_views(output_size=None):
