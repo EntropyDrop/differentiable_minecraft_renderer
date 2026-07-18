@@ -4,7 +4,7 @@ import re
 
 full_part = ['head', 'body', 'left_arm', 'right_arm', 'left_leg', 'right_leg']
 
-zoom = 0.24
+zoom = 0.28
 
 def parse_size_tuple(s):
     s = s.strip().strip("()[]")
@@ -20,7 +20,7 @@ def parse_size_tuple(s):
 
 def parse_sizes(env_val):
     if not env_val:
-        return [(384, 688), (768, 1376)]
+        return [(344, 768),(688, 1536)]
     
     pattern = r'\(?\s*(\d+)\s*[\times,X\s]\s*(\d+)\s*\)?'
     matches = re.findall(pattern, env_val)
