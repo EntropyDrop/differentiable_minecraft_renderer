@@ -53,38 +53,38 @@ size = sizes[0]
 
 def create_views(output_size):
     return {
-        "front1": {
+        "front_left": {
             "cam_front": (-0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
             "core_display": full_part, "decor_display": full_part, "output_size": output_size, "ortho": True
         },
-        "back1": {
+        "back_left": {
             "cam_front": (0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
             "core_display": full_part, "decor_display": full_part, "output_size": output_size, "ortho": True
         },
-        "front2": {
+        "front_right": {
             "cam_front": (0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
             "core_display": full_part, "decor_display": full_part, "output_size": output_size, "ortho": True
         },
-        "back2": {
+        "back_right": {
             "cam_front": (-0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
             "core_display": full_part, "decor_display": full_part, "output_size": output_size, "ortho": True
         },
-        "base_front2": {
-            "cam_front": (0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
-            "core_display": full_part, "decor_display": [], "output_size": output_size, "ortho": True
-        },
-        "base_back2": {
-            "cam_front": (-0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
-            "core_display": full_part, "decor_display": [], "output_size": output_size, "ortho": True
-        },
-        "base_front1": {
-            "cam_front": (-0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
-            "core_display": full_part, "decor_display": [], "output_size": output_size, "ortho": True
-        },
-        "base_back1": {
-            "cam_front": (0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
-            "core_display": full_part, "decor_display": [], "output_size": output_size, "ortho": True
-        },
+        #"base_front2": {
+        #    "cam_front": (0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
+        #    "core_display": full_part, "decor_display": [], "output_size": output_size, "ortho": True
+        #},
+        #"base_back2": {
+        #    "cam_front": (-0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
+        #    "core_display": full_part, "decor_display": [], "output_size": output_size, "ortho": True
+        #},
+        #"base_front1": {
+        #    "cam_front": (-0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
+        #    "core_display": full_part, "decor_display": [], "output_size": output_size, "ortho": True
+        #},
+        #"base_back1": {
+        #    "cam_front": (0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
+        #    "core_display": full_part, "decor_display": [], "output_size": output_size, "ortho": True
+        #},
         #"static_front": {
         #    "cam_front": (-0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": False,
         #    "core_display": full_part, "decor_display": full_part, "output_size": output_size, "ortho": True
