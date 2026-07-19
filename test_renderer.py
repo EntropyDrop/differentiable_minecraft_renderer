@@ -80,6 +80,7 @@ def run_tests(selected_views=None, size_arg=None):
             rot_args=rot_args,
             offset_args=offset_args,
             ortho=params.get("ortho", False),
+            #show_wireframe=True,
             off_screen=True
         )
         
