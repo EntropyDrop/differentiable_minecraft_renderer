@@ -4,7 +4,8 @@ import re
 
 full_part = ['head', 'body', 'left_arm', 'right_arm', 'left_leg', 'right_leg']
 
-zoom = 0.25
+# 0.25
+zoom = 0.28
 
 def parse_size_tuple(s):
     s = s.strip().strip("()[]")
@@ -20,7 +21,8 @@ def parse_size_tuple(s):
 
 def parse_sizes(env_val):
     if not env_val:
-        return [(256, 512),(512, 1024), (1024, 2048)]
+        #return [(256, 512),(512, 1024), (1024, 2048)]
+        return [(344, 768),(344*2, 768*2)]
     
     pattern = r'\(?\s*(\d+)\s*[\times,X\s]\s*(\d+)\s*\)?'
     matches = re.findall(pattern, env_val)
@@ -69,6 +71,23 @@ def create_views(output_size):
             "cam_front": (-0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
             "core_display": full_part, "decor_display": full_part, "output_size": output_size, "ortho": True
         },
+        "front_left_overlay": {
+            "cam_front": (-0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
+            "core_display": [], "decor_display": full_part, "output_size": output_size, "ortho": True
+        },
+        "back_left_overlay": {
+            "cam_front": (0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
+            "core_display": [], "decor_display": full_part, "output_size": output_size, "ortho": True
+        },
+        "front_right_overlay": {
+            "cam_front": (0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
+            "core_display": [], "decor_display": full_part, "output_size": output_size, "ortho": True
+        },
+        "back_right_overlay": {
+            "cam_front": (-0.3, 0.1, -0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
+            "core_display": [], "decor_display": full_part, "output_size": output_size, "ortho": True
+        },
+
         #"base_front2": {
         #    "cam_front": (0.3, 0.1, 0.5), "zoom": zoom, "look_at_y": 16, "walk": True,
         #    "core_display": full_part, "decor_display": [], "output_size": output_size, "ortho": True
